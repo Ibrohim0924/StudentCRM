@@ -1,0 +1,446 @@
+import {
+  Badge,
+  Box,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Divider,
+  FormControl,
+  FormLabel,
+  HStack,
+  Heading,
+  IconButton,
+  Input,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  NumberInput,
+  NumberInputFieldBox,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Divider,
+  FormControl,
+  FormLabel,
+  HStack,
+  Heading,
+  IconButton,
+  Input,
+  Menu,
+  MenuButton,
+  MenuItem,
+  M          </Button>
+          <Button colorScheme="teal" onClick={handleSubmit}>
+            {isEditing ? 'Saqlash' : 'Qoshish'}
+          </Button>
+          <ModalFooter>st,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  NumberInput,
+  NumberInputField,
+  Select,
+  SimpleGrid,
+  Spinner,
+  Stack,
+  Table,
+  Tbody,
+  Td,
+  Text,
+  Th,
+  Thead,
+  Tr,
+  useDisclosure,
+} from '@chakra-ui/react';
+import { useEffect, useMemo, useState } from 'react';
+import { FiMoreVertical } from 'react-icons/fi';
+import { api } from '../api/client';
+import {
+  Course,
+  CourseStatusFilter,
+  CreateCoursePayload,
+  Instructor,
+  UpdateCoursePayload,
+} from '../api/types';
+import { useApiToast } from '../hooks/useApiToast';
+
+const statusFilters: { label: string; value?: CourseStatusFilter }[] = [
+  { label: 'Barchasi', value: undefined },
+  { label: 'Tez orada', value: 'upcoming' },
+  { label: 'Davom etmoqda', value: 'ongoing' },
+  { label: 'Yakunlangan', value: 'completed' },
+];
+
+interface CourseFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (values: CreateCoursePayload, courseId?: number) => Promise<void>;
+  instructors: Instructor[];
+  course?: Course | null;
+}
+
+const createEmptyForm = (): CreateCoursePayload => ({
+  title: '',
+  description: '',
+  startDate: new Date().toISOString().slice(0, 16),
+  endDate: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16),
+  capacity: 10,
+  instructorId: undefined,
+});
+
+const CourseForm = ({ isOpen, onClose, onSubmit, instructors, course }: CourseFormProps) => {
+  const [form, setForm] = useState<CreateCoursePayload>(createEmptyForm());
+  const isEditing = Boolean(course);
+
+  useEffect(() => {
+    if (course) {
+      setForm({
+        title: course.title,
+        description: course.description,
+        startDate: new Date(course.startDate).toISOString().slice(0, 16),
+        endDate: new Date(course.endDate).toISOString().slice(0, 16),
+        capacity: course.capacity,
+        instructorId: course.instructorId ?? undefined,
+      });
+    } else {
+      setForm(createEmptyForm());
+    }
+  }, [course]);
+
+  const handleChange = (field: keyof CreateCoursePayload, value: string | number | undefined) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    const payload: CreateCoursePayload = {
+      ...form,
+      startDate: new Date(form.startDate).toISOString(),
+      endDate: new Date(form.endDate).toISOString(),
+      capacity: Number(form.capacity),
+      instructorId: form.instructorId ? Number(form.instructorId) : undefined,
+    };
+
+    try {
+      await onSubmit(payload, course?.id);
+      onClose();
+    } catch (error) {
+      // Xatolik allaqachon bildirilgan
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="xl">
+      <ModalOverlay />
+      <ModalContent>
+        <ModalHeader>{isEditing ? 'Kursni tahrirlash' : 'Yangi kurs qoshish'}</ModalHeader>
+        <ModalCloseButton />
+        <ModalBody>
+          <Stack spacing={4}>
+            <FormControl isRequired>
+              <FormLabel>Kurs nomi</FormLabel>
+              <Input
+                value={form.title}
+                placeholder="Masalan, Node.js Bootcamp"
+                onChange={(event) => handleChange('title', event.target.value)}
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Tavsif</FormLabel>
+              <Input
+                value={form.description}
+                placeholder="Kurs mazmuni"
+                onChange={(event) => handleChange('description', event.target.value)}
+              />
+            </FormControl>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Boshlanish sanasi</FormLabel>
+                <Input
+                  type="datetime-local"
+                  value={form.startDate}
+                  onChange={(event) => handleChange('startDate', event.target.value)}
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Tugash sanasi</FormLabel>
+                <Input
+                  type="datetime-local"
+                  value={form.endDate}
+                  onChange={(event) => handleChange('endDate', event.target.value)}
+                />
+              </FormControl>
+            </SimpleGrid>
+            <FormControl isRequired>
+              <FormLabel>Quvvat (joylar soni)</FormLabel>
+              <NumberInput
+                min={1}
+                value={form.capacity}
+                onChange={(_, value) => handleChange('capacity', value)}
+              >
+                <NumberInputField />
+              </NumberInput>
+            </FormControl>
+            <FormControl>
+              <FormLabel>Instruktor</FormLabel>
+              <Select
+                placeholder="Instruktorni tanlang"
+                value={form.instructorId ?? ''}
+                onChange={(event) =>
+                  handleChange('instructorId', event.target.value ? Number(event.target.value) : undefined)
+                }
+              >
+                {instructors.map((instructor) => (
+                  <option key={instructor.id} value={instructor.id}>
+                    {instructor.name}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" mr={3} onClick={onClose}>
+            Bekor qilish
+          </Button>
+          <Button colorScheme="teal" onClick={handleSubmit}>
+            {isEditing ? 'Saqlash' : 'Qo'shish'}
+          </Button>
+        </ModalFooter>
+      </ModalContent>
+    </Modal>
+  );
+};
+
+const CoursesPage = () => {
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [status, setStatus] = useState<CourseStatusFilter | undefined>(undefined);
+  const [loading, setLoading] = useState(true);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const createModal = useDisclosure();
+  const editModal = useDisclosure();
+  const { showError, showSuccess } = useApiToast();
+
+  const refreshCourses = async (selected?: CourseStatusFilter) => {
+    try {
+      setLoading(true);
+      const [coursesRes, instructorsRes] = await Promise.all([
+        api.getCourses(selected),
+        api.getInstructors(),
+      ]);
+      setCourses(coursesRes);
+      setInstructors(instructorsRes);
+    } catch (error: any) {
+      showError('Kurslarni yuklab bo\'lmadi', error.message ?? 'Noma\'lum xato');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshCourses(status);
+  }, [status]);
+
+  const handleSubmit = async (payload: CreateCoursePayload, id?: number) => {
+    try {
+      if (id) {
+        await api.updateCourse(id, payload as UpdateCoursePayload);
+        showSuccess('Kurs yangilandi');
+      } else {
+        await api.createCourse(payload);
+        showSuccess('Kurs qo'shildi');
+      }
+      await refreshCourses(status);
+    } catch (error: any) {
+      showError('Amalni bajarib bo'lmadi', error.message ?? 'Noma'lum xato');
+      return Promise.reject(error);
+    }
+  };
+
+  const handleDelete = async (course: Course) => {
+    try {
+      await api.deleteCourse(course.id);
+      showSuccess("Kurs o'chirildi");
+      await refreshCourses(status);
+    } catch (error: any) {
+      showError('Kursni o'chirishda xato', error.message ?? 'Noma'lum xato');
+    }
+  };
+
+  const statusBadges: Record<CourseStatusFilter, { label: string; colorScheme: string }> = {
+    upcoming: { label: 'Tez orada', colorScheme: 'purple' },
+    ongoing: { label: 'Davom etmoqda', colorScheme: 'green' },
+    completed: { label: 'Tugagan', colorScheme: 'orange' },
+  };
+
+  const deriveStatus = (course: Course): CourseStatusFilter => {
+    const now = new Date();
+    const start = new Date(course.startDate);
+    const end = new Date(course.endDate);
+    if (start > now) return 'upcoming';
+    if (end < now) return 'completed';
+    return 'ongoing';
+  };
+
+  const sortedCourses = useMemo(
+    () =>
+      [...courses].sort(
+        (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+      ),
+    [courses],
+  );
+
+  return (
+    <Stack spacing={8}>
+      <HStack
+        justify="space-between"
+        align={{ base: 'stretch', md: 'center' }}
+        flexDir={{ base: 'column', md: 'row' }}
+      >
+        <Box>
+          <Heading size="lg" mb={2}>
+            Kurslar boshqaruvi
+          </Heading>
+          <Text color="gray.500">
+            Kurslarni qo'shish, tahrirlash va holatini kuzatish.
+          </Text>
+        </Box>
+        <Button colorScheme="teal" onClick={createModal.onOpen} alignSelf={{ base: 'flex-start', md: 'auto' }}>
+          Yangi kurs
+        </Button>
+      </HStack>
+
+      <Card shadow="sm" borderRadius="lg">
+        <CardBody>
+          <Heading size="md" mb={4}>
+            Holat bo'yicha filtr
+          </Heading>
+          <HStack spacing={3} overflowX="auto" pb={2}>
+            {statusFilters.map((filter) => {
+              const isActive = status === filter.value;
+              return (
+                <Button
+                  key={filter.label}
+                  variant={isActive ? 'solid' : 'outline'}
+                  colorScheme="teal"
+                  onClick={() => setStatus(filter.value)}
+                >
+                  {filter.label}
+                </Button>
+              );
+            })}
+          </HStack>
+        </CardBody>
+      </Card>
+
+      <Card shadow="md" borderRadius="lg">
+        <CardHeader>
+          <Heading size="md">Kurslar ro'yxati</Heading>
+        </CardHeader>
+        <Divider />
+        <CardBody>
+          {loading ? (
+            <Stack align="center" py={16}>
+              <Spinner size="lg" />
+            </Stack>
+          ) : sortedCourses.length === 0 ? (
+            <Text color="gray.500">Tanlangan filtr bo'yicha kurs topilmadi.</Text>
+          ) : (
+            <Box overflowX="auto">
+              <Table variant="simple" size="md">
+                <Thead>
+                  <Tr>
+                    <Th>Kurs</Th>
+                    <Th>Instruktor</Th>
+                    <Th>Boshlanish</Th>
+                    <Th>Tugash</Th>
+                    <Th>Joylar</Th>
+                    <Th>Status</Th>
+                    <Th textAlign="right">Amallar</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {sortedCourses.map((course) => {
+                    const courseStatus = deriveStatus(course);
+                    const badge = statusBadges[courseStatus];
+                    return (
+                      <Tr key={course.id} _hover={{ bg: 'gray.50' }}>
+                        <Td>
+                          <Text fontWeight="semibold">{course.title}</Text>
+                          <Text fontSize="sm" color="gray.500">
+                            {course.description}
+                          </Text>
+                        </Td>
+                        <Td>{course.instructor?.name ?? 'Biriktirilmagan'}</Td>
+                        <Td>{new Date(course.startDate).toLocaleString('uz-UZ')}</Td>
+                        <Td>{new Date(course.endDate).toLocaleString('uz-UZ')}</Td>
+                        <Td>
+                          {course.capacity - course.seatsAvailable}/{course.capacity}
+                        </Td>
+                        <Td>
+                          <Badge colorScheme={badge.colorScheme}>{badge.label}</Badge>
+                        </Td>
+                        <Td textAlign="right">
+                          <Menu placement="bottom-end">
+                            <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" />
+                            <MenuList>
+                              <MenuItem
+                                onClick={() => {
+                                  setEditingCourse(course);
+                                  editModal.onOpen();
+                                }}
+                              >
+                                Tahrirlash
+                              </MenuItem>
+                              <MenuItem color="red.500" onClick={() => handleDelete(course)}>
+                                O'chirish
+                              </MenuItem>
+                            </MenuList>
+                          </Menu>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </CardBody>
+      </Card>
+
+      <CourseForm
+        isOpen={createModal.isOpen}
+        onClose={createModal.onClose}
+        onSubmit={handleSubmit}
+        instructors={instructors}
+      />
+
+      <CourseForm
+        isOpen={editModal.isOpen}
+        onClose={() => {
+          setEditingCourse(null);
+          editModal.onClose();
+        }}
+        onSubmit={handleSubmit}
+        instructors={instructors}
+        course={editingCourse}
+      />
+    </Stack>
+  );
+};
+
+export default CoursesPage;
