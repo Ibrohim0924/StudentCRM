@@ -13,6 +13,7 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+  app.setGlobalPrefix('api');
 
   const configService = app.get(ConfigService);
   const port = parseInt(configService.get<string>('PORT', '3000'), 10);
