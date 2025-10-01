@@ -149,6 +149,20 @@ export class EnrollmentsService {
         throw new NotFoundException(`Enrollment with id ${id} not found`);
       }
 
+      if (
+        updateEnrollmentDto.studentId !== undefined &&
+        updateEnrollmentDto.studentId !== enrollment.studentId
+      ) {
+        throw new ConflictException('Changing student for an enrollment is not supported');
+      }
+
+      if (
+        updateEnrollmentDto.courseId !== undefined &&
+        updateEnrollmentDto.courseId !== enrollment.courseId
+      ) {
+        throw new ConflictException('Changing course for an enrollment is not supported');
+      }
+
       const course =
         enrollment.course ?? (await manager.findOne(Course, { where: { id: enrollment.courseId } }));
       if (!course) {
