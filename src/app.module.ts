@@ -22,11 +22,13 @@ import { EnrollmentsModule } from './modules/enrollments/enrollments.module';
       autoLoadEntities: true,
       synchronize: true,
       logging: false,
+      
     }),
     CoursesModule,
     InstructorsModule,
     StudentsModule,
     EnrollmentsModule,
   ],
+  
 })
 export class AppModule {}
