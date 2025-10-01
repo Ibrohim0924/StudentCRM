@@ -1,0 +1,614 @@
+{
+	"info": {
+		"_postman_id": "9f844e60-0230-49bf-a073-e43ecb576bf5",
+		"name": "STUDENTCRM",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "44883797",
+		"_collection_link": "https://ibrohim-6611463.postman.co/workspace/ibrohim's-Workspace~77d3c1ad-fa72-4180-8a61-0f54a233378e/collection/44883797-9f844e60-0230-49bf-a073-e43ecb576bf5?action=share&source=collection_link&creator=44883797"
+	},
+	"item": [
+		{
+			"name": "COURSE",
+			"item": [
+				{
+					"name": "CREATE COURSE",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"title\": \"Advanced TypeScript Patterns\",\r\n  \"description\": \"Deep dive into generics, decorators, and runtime integration for NestJS projects.\",\r\n  \"startDate\": \"2025-02-03T09:00:00.000Z\",\r\n  \"endDate\": \"2025-04-28T09:00:00.000Z\",\r\n  \"capacity\": 25,\r\n  \"instructorId\": 1\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/courses",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"courses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET ALL COURSES",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@example.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:3000/courses",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"courses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET COURSE BY ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/courses/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"courses",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UPDATE COURSE BY ID",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"Advanced TypeScript Patterns\",\r\n    \"description\": \"Deep dive into generics, decorators, and runtime integration for NestJS projects.\",\r\n    \"startDate\": \"2025-11-01T09:00:00.000Z\",\r\n    \"endDate\": \"2026-01-31T09:00:00.000Z\",\r\n    \"capacity\": 25,\r\n    \"instructorId\": 3\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/courses/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"courses",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE COURSE BY ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"Advanced TypeScript Patterns\",\r\n    \"description\": \"Deep dive into generics, decorators, and runtime integration for NestJS projects.\",\r\n    \"startDate\": \"2025-11-01T09:00:00.000Z\",\r\n    \"endDate\": \"2026-01-31T09:00:00.000Z\",\r\n    \"capacity\": 25,\r\n    \"instructorId\": 3\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/courses/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"courses",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "TEACHER",
+			"item": [
+				{
+					"name": "CREATE TECHER",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Dr. Emily Carter\",\r\n  \"email\": \"emily.carter@example.edu\",\r\n  \"bio\": \"Ten years teaching data science, previously led analytics at a fintech startup.\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/instructors",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"instructors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "New Request",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "GET TEACHER BY ID WITH COURSE",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@example.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:3000/instructors/1/courses",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"instructors",
+								"1",
+								"courses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET ALL TEACHERS",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/instructors",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"instructors"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET TEACHER BY ID",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@example.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:3000/instructors/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"instructors",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UPDATE TEACHER BY ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Dr. Emily Carter\",\r\n  \"email\": \"emily.carter@example.wdu\",\r\n  \"bio\": \"Ten years teaching data science, previously led analytics at a fintech startup.\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/instructors/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"instructors",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE TEACHER BY ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"title\": \"Advanced TypeScript Patterns\",\r\n    \"description\": \"Deep dive into generics, decorators, and runtime integration for NestJS projects.\",\r\n    \"startDate\": \"2025-11-01T09:00:00.000Z\",\r\n    \"endDate\": \"2026-01-31T09:00:00.000Z\",\r\n    \"capacity\": 25,\r\n    \"instructorId\": 3\r\n}"
+						},
+						"url": {
+							"raw": "http://localhost:3000/instructors/1",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"instructors",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "STUDENTS",
+			"item": [
+				{
+					"name": "CREATE STUDENT",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@example.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/students",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"students"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET ALL STUDENTS",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjYsImVtYWlsIjoiaWJyb2hpbXRvc2hxb3JpeWV2M0BnbWFpbC5jb20iLCJpYXQiOjE3NTgyNzY4MjQsImV4cCI6MTc1ODM2MzIyNH0.F3ghjhYxpGAI_g2VrL6u6rfRVsFH7pREanmaEWXYRTw",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@example.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:3000/students",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"students"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET STUDENT BY ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/students/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"students",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UPDATE STUDENT BY ID",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@examplke.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/students/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"students",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE STUDENT BY ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Amina Ruzmetova\",\r\n  \"email\": \"amina.ruzmetova@examplke.com\",\r\n  \"enrolledAt\": \"2025-01-08T10:00:00.000Z\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "http://localhost:3000/students/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"students",
+								"2"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ENROLLMENT",
+			"item": [
+				{
+					"name": "CREATE ENROLLMENT",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "GET ALL ENROLLMENTS",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/enroll",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"enroll"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET ENROLLMENT BY ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/enroll/5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"enroll",
+								"5"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UPDATE ENROLLMENT BY ID",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"studentId\": 5,\r\n  \"courseId\": 6\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/enroll/6",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"enroll",
+								"6"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE ENROLLMENT BY ID",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/enroll/5",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"enroll",
+								"5"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service';
 import { EnrollStudentDto } from './dto/enroll-student.dto';
 import { CompleteEnrollmentDto } from './dto/complete-enrollment.dto';
 import { UnenrollDto } from './dto/unenroll.dto';
 import { Enrollment } from './entities/enrollment.entity';
+import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
 
 @Controller()
 export class EnrollmentsController {
@@ -22,6 +23,29 @@ export class EnrollmentsController {
   @Post('unenroll')
   unenroll(@Body() unenrollDto: UnenrollDto): Promise<Enrollment> {
     return this.enrollmentsService.unenroll(unenrollDto);
+  }
+
+  @Get('enroll')
+  findAll(): Promise<Enrollment[]> {
+    return this.enrollmentsService.findAll();
+  }
+
+  @Get('enroll/:id')
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Enrollment> {
+    return this.enrollmentsService.findOne(id);
+  }
+
+  @Patch('enroll/:id')
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateEnrollmentDto: UpdateEnrollmentDto,
+  ): Promise<Enrollment> {
+    return this.enrollmentsService.update(id, updateEnrollmentDto);
+  }
+
+  @Delete('enroll/:id')
+  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    return this.enrollmentsService.remove(id);
   }
 
   @Get('enrollments/active')
