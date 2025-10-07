@@ -1,4 +1,10 @@
 ﻿import {
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
   Badge,
   Box,
   Button,
@@ -152,14 +158,23 @@ const StudentsPage = () => {
   const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
   const [history, setHistory] = useState<Enrollment[]>([]);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [expandedStudentId, setExpandedStudentId] = useState<number | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const drawer = useDisclosure();
   const formDisclosure = useDisclosure();
+  const deleteDialog = useDisclosure();
+  const cancelDeleteRef = useRef<HTMLButtonElement | null>(null);
   const { showError, showSuccess } = useApiToast();
   const showErrorRef = useRef(showError);
 
   useEffect(() => {
     showErrorRef.current = showError;
   }, [showError]);
+
+  const toggleStudentCard = (studentId: number) => {
+    setExpandedStudentId((prev) => (prev === studentId ? null : studentId));
+  };
 
   const loadStudents = useCallback(
     async (showGlobalSpinner = false): Promise<Student[]> => {
@@ -172,6 +187,7 @@ const StudentsPage = () => {
         const list = await api.getStudents();
         const sorted = sortStudents(list);
         setStudents(sorted);
+        setExpandedStudentId((prev) => (prev && !sorted.some((student) => student.id === prev) ? null : prev));
         return sorted;
       } catch (error: any) {
         showErrorRef.current?.("Talabalarni yuklab bo'lmadi", error.message ?? "Noma'lum xato");
@@ -219,6 +235,7 @@ const StudentsPage = () => {
           const updated = await api.updateStudent(studentId, payload);
           setStudents((prev) => sortStudents(prev.map((student) => (student.id === studentId ? updated : student))));
           showSuccess('Talaba yangilandi');
+          setExpandedStudentId((prev) => (prev === studentId ? null : prev));
 
           if (selectedProfile?.student.id === studentId) {
             try {
@@ -241,32 +258,39 @@ const StudentsPage = () => {
         setFormSubmitting(false);
       }
     },
-    [fetchProfile, selectedProfile?.student.id, showSuccess],
+    [fetchProfile, loadStudents, selectedProfile?.student.id, showSuccess],
   );
 
-  const handleDeleteStudent = useCallback(
-    async (studentId: number) => {
-      const confirmDelete = window.confirm(
-        "Talabani o'chirishni tasdiqlaysizmi? Bu amal barcha ro'yxatlarni ham o'chiradi.",
-      );
-      if (!confirmDelete) {
-        return;
-      }
+  const requestDeleteStudent = (student: Student) => {
+    setStudentToDelete(student);
+    deleteDialog.onOpen();
+  };
 
-      try {
-        await api.deleteStudent(studentId);
-        showSuccess("Talaba o'chirildi");
+  const confirmDeleteStudent = async () => {
+    if (!studentToDelete) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await api.deleteStudent(studentToDelete.id);
+      showSuccess("Talaba o'chirildi");
+      if (selectedProfile?.student.id === studentToDelete.id) {
         drawer.onClose();
         setSelectedProfile(null);
         setHistory([]);
         setEditingStudent(null);
-        await loadStudents(false);
-      } catch (error: any) {
-        showErrorRef.current?.("Talabani o'chirib bo'lmadi", error.message ?? "Noma'lum xato");
       }
-    },
-    [drawer, loadStudents, showSuccess],
-  );
+      setExpandedStudentId((prev) => (prev === studentToDelete.id ? null : prev));
+      await loadStudents(false);
+    } catch (error: any) {
+      showErrorRef.current?.("Talabani o'chirib bo'lmadi", error.message ?? "Noma'lum xato");
+    } finally {
+      setDeleteLoading(false);
+      setStudentToDelete(null);
+      deleteDialog.onClose();
+    }
+  };
 
   const stats = useMemo(
     () => ({
@@ -278,13 +302,19 @@ const StudentsPage = () => {
 
   const openCreateForm = () => {
     setEditingStudent(null);
+    setExpandedStudentId(null);
+    formDisclosure.onOpen();
+  };
+
+  const openEditStudent = (student: Student) => {
+    setEditingStudent(student);
     formDisclosure.onOpen();
   };
 
   const handleEditClick = () => {
     if (!selectedProfile) return;
-    setEditingStudent(selectedProfile.student);
-    formDisclosure.onOpen();
+    openEditStudent(selectedProfile.student);
+    drawer.onClose();
   };
 
   const closeForm = () => {
@@ -326,36 +356,74 @@ const StudentsPage = () => {
         <Text color="gray.500">Hozircha talaba qo'shilmagan.</Text>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} spacing={6}>
-          {students.map((student) => (
-            <Card
-              key={student.id}
-              shadow="lg"
-              borderRadius="xl"
-              bg="white"
-              cursor="pointer"
-              _hover={{ transform: 'translateY(-4px)', shadow: 'xl' }}
-              transition="all 0.2s ease"
-              onClick={() => void openProfile(student)}
-            >
-              <CardHeader>
-                <Heading size="md">{student.name}</Heading>
-                <Text fontSize="sm" color="gray.500">
-                  {student.email}
-                </Text>
-              </CardHeader>
-              <CardBody>
-                <Stack spacing={3}>
-                  <Text fontSize="sm" color="gray.600">
-                    Ro'yxatga olingan sana:{' '}
-                    <strong>{new Date(student.enrolledAt).toLocaleDateString('uz-UZ')}</strong>
+          {students.map((student) => {
+            const isExpanded = expandedStudentId === student.id;
+            return (
+              <Card
+                key={student.id}
+                shadow="lg"
+                borderRadius="xl"
+                bg="white"
+                cursor="pointer"
+                _hover={{ transform: 'translateY(-4px)', shadow: 'xl' }}
+                transition="all 0.2s ease"
+                onClick={() => toggleStudentCard(student.id)}
+              >
+                <CardHeader>
+                  <Heading size="md">{student.name}</Heading>
+                  <Text fontSize="sm" color="gray.500">
+                    {student.email}
                   </Text>
-                  <Badge colorScheme="teal" width="fit-content">
-                    ID: {student.id}
-                  </Badge>
-                </Stack>
-              </CardBody>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardBody>
+                  <Stack spacing={3}>
+                    <Text fontSize="sm" color="gray.600">
+                      Ro'yxatga olingan sana:{' '}
+                      <strong>{new Date(student.enrolledAt).toLocaleDateString('uz-UZ')}</strong>
+                    </Text>
+                    <Badge colorScheme="teal" width="fit-content">
+                      ID: {student.id}
+                    </Badge>
+                    {isExpanded ? (
+                      <Stack direction={{ base: 'column', sm: 'row' }} spacing={3} pt={2}>
+                        <Button
+                          colorScheme="teal"
+                          flex={1}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditStudent(student);
+                          }}
+                        >
+                          Tahrirlash
+                        </Button>
+                        <Button
+                          variant="outline"
+                          colorScheme="red"
+                          flex={1}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requestDeleteStudent(student);
+                          }}
+                        >
+                          O'chirish
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          flex={1}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void openProfile(student);
+                          }}
+                        >
+                          Profil
+                        </Button>
+                      </Stack>
+                    ) : null}
+                  </Stack>
+                </CardBody>
+              </Card>
+            );
+          })}
         </SimpleGrid>
       )}
 
@@ -388,7 +456,9 @@ const StudentsPage = () => {
                     leftIcon={<FiTrash2 />}
                     colorScheme="red"
                     variant="outline"
-                    onClick={() => void handleDeleteStudent(selectedProfile.student.id)}
+                    onClick={() => {
+                      requestDeleteStudent(selectedProfile.student);
+                    }}
                   >
                     O'chirish
                   </Button>
@@ -468,6 +538,38 @@ const StudentsPage = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+
+      <AlertDialog
+        isOpen={deleteDialog.isOpen}
+        leastDestructiveRef={cancelDeleteRef}
+        onClose={() => {
+          setStudentToDelete(null);
+          deleteDialog.onClose();
+        }}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Talabani o'chirish
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              {studentToDelete
+                ? `${studentToDelete.name} ismli talabani o'chirishni tasdiqlaysizmi?`
+                : "Talabani o'chirishni tasdiqlaysizmi?"}
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelDeleteRef} onClick={deleteDialog.onClose} isDisabled={deleteLoading}>
+                Bekor qilish
+              </Button>
+              <Button colorScheme="red" ml={3} onClick={confirmDeleteStudent} isLoading={deleteLoading}>
+                O'chirish
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
+
     </Stack>
   );
 };

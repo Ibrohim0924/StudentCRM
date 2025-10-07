@@ -68,6 +68,8 @@ export interface CreateInstructorPayload {
   bio?: string;
 }
 
+export interface UpdateInstructorPayload extends Partial<CreateInstructorPayload> {}
+
 export interface CreateStudentPayload {
   name: string;
   email: string;

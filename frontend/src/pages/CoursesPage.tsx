@@ -39,7 +39,7 @@ import {
   Tr,
   useDisclosure,
 } from '@chakra-ui/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FiMoreVertical } from 'react-icons/fi';
 import { api } from '../api/client';
 import {
@@ -234,6 +234,11 @@ const CoursesPage = () => {
     void refreshCourses(status);
   }, [status]);
 
+  const handleEditCourse = useCallback((course: Course) => {
+    setEditingCourse(course);
+    editModal.onOpen();
+  }, [editModal]);
+
   const handleSubmit = async (payload: CreateCoursePayload, id?: number) => {
     try {
       if (id) {
@@ -356,14 +361,35 @@ const CoursesPage = () => {
                     const badge = statusBadges[courseStatus];
                     const isCompleted = courseStatus === 'completed';
                     return (
-                      <Tr key={course.id} _hover={{ bg: 'gray.50' }}>
+                      <Tr
+                        key={course.id}
+                        _hover={{ bg: 'gray.50' }}
+                        cursor="pointer"
+                        onClick={() => handleEditCourse(course)}
+                      >
                         <Td>
                           <Text fontWeight="semibold">{course.title}</Text>
                           <Text fontSize="sm" color="gray.500">
                             {course.description}
                           </Text>
                         </Td>
-                        <Td>{course.instructor?.name ?? 'Biriktirilmagan'}</Td>
+                        <Td>
+                          {course.instructor ? (
+                            course.instructor.name
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorScheme="teal"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleEditCourse(course);
+                              }}
+                            >
+                              Instruktor biriktirish
+                            </Button>
+                          )}
+                        </Td>
                         <Td>{new Date(course.startDate).toLocaleString('uz-UZ')}</Td>
                         <Td>{new Date(course.endDate).toLocaleString('uz-UZ')}</Td>
                         <Td>
@@ -374,19 +400,27 @@ const CoursesPage = () => {
                         </Td>
                         <Td textAlign="right">
                           <Menu placement="bottom-end">
-                            <MenuButton as={IconButton} icon={<FiMoreVertical />} variant="ghost" />
+                            <MenuButton
+                              as={IconButton}
+                              icon={<FiMoreVertical />}
+                              variant="ghost"
+                              onClick={(event) => event.stopPropagation()}
+                            />
                             <MenuList>
                               <MenuItem
-                                onClick={() => {
-                                  setEditingCourse(course);
-                                  editModal.onOpen();
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleEditCourse(course);
                                 }}
                               >
                                 Tahrirlash
                               </MenuItem>
                               <MenuItem
                                 color="red.500"
-                                onClick={() => handleDelete(course)}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleDelete(course);
+                                }}
                                 isDisabled={isCompleted}
                               >
                                 O'chirish

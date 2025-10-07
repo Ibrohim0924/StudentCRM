@@ -4,6 +4,7 @@
   CourseStatusFilter,
   CreateCoursePayload,
   CreateInstructorPayload,
+  UpdateInstructorPayload,
   CreateStudentPayload,
   EnrollPayload,
   Enrollment,
@@ -83,6 +84,17 @@ export const api = {
     request<Instructor>('/instructors', {
       method: 'POST',
       body: JSON.stringify(payload),
+    }),
+
+  updateInstructor: (id: number, payload: UpdateInstructorPayload) =>
+    request<Instructor>(`/instructors/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  deleteInstructor: (id: number) =>
+    request<void>(`/instructors/${id}`, {
+      method: 'DELETE',
     }),
 
   getInstructorCourses: (id: number) => request<Course[]>(`/instructors/${id}/courses`),
