@@ -13,7 +13,6 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
-  app.setGlobalPrefix('api');
 
 
   const configService = app.get(ConfigService);
