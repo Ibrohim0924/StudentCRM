@@ -234,7 +234,7 @@ const InstructorsPage = () => {
       setExpandedInstructorId(null);
       setEditingInstructor(null);
     } catch (error: any) {
-      showError(instructorId ? 'Yangilashda xato' : 'Saqlashda xato', error.message ?? 'Noma'lum xato');
+      showError(instructorId ? 'Yangilashda xato' : 'Saqlashda xato', error.message ?? "Noma'lum xato");
       throw error;
     } finally {
       setFormSubmitting(false);
