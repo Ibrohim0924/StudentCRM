@@ -170,10 +170,17 @@ const InstructorsPage = () => {
       }
       try {
         const [instructorsRes, coursesRes] = await Promise.all([api.getInstructors(), api.getCourses()]);
-        setInstructors(instructorsRes);
-        setCourses(coursesRes);
+        const safeInstructors = Array.isArray(instructorsRes) ? instructorsRes : [];
+        const safeCourses = Array.isArray(coursesRes) ? coursesRes : [];
+
+        if (!Array.isArray(instructorsRes) || !Array.isArray(coursesRes)) {
+          showError("Server noto'g'ri javob qaytardi");
+        }
+
+        setInstructors(safeInstructors);
+        setCourses(safeCourses);
         setExpandedInstructorId((prev) =>
-          prev && !instructorsRes.some((instructor) => instructor.id === prev) ? null : prev,
+          prev && !safeInstructors.some((instructor) => instructor.id === prev) ? null : prev,
         );
       } catch (error: any) {
         showError("O'qituvchilarni yuklab bo'lmadi", error.message ?? "Noma'lum xato");
