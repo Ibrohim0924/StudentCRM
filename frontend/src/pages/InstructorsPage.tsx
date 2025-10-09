@@ -159,6 +159,16 @@ const InstructorsPage = () => {
   const [instructorToDelete, setInstructorToDelete] = useState<Instructor | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { showError, showSuccess } = useApiToast();
+  const showErrorRef = useRef(showError);
+  const showSuccessRef = useRef(showSuccess);
+
+  useEffect(() => {
+    showErrorRef.current = showError;
+  }, [showError]);
+
+  useEffect(() => {
+    showSuccessRef.current = showSuccess;
+  }, [showSuccess]);
   const formDisclosure = useDisclosure();
   const deleteDialog = useDisclosure();
   const cancelDeleteRef = useRef<HTMLButtonElement | null>(null);
@@ -174,7 +184,7 @@ const InstructorsPage = () => {
         const safeCourses = Array.isArray(coursesRes) ? coursesRes : [];
 
         if (!Array.isArray(instructorsRes) || !Array.isArray(coursesRes)) {
-          showError("Server noto'g'ri javob qaytardi");
+          showErrorRef.current("Server noto'g'ri javob qaytardi");
         }
 
         setInstructors(safeInstructors);
@@ -183,14 +193,14 @@ const InstructorsPage = () => {
           prev && !safeInstructors.some((instructor) => instructor.id === prev) ? null : prev,
         );
       } catch (error: any) {
-        showError("O'qituvchilarni yuklab bo'lmadi", error.message ?? "Noma'lum xato");
+        showErrorRef.current("O'qituvchilarni yuklab bo'lmadi", error?.message ?? "Noma'lum xato");
       } finally {
         if (showLoader) {
           setLoading(false);
         }
       }
     },
-    [showError],
+    [],
   );
 
   useEffect(() => {
@@ -232,16 +242,16 @@ const InstructorsPage = () => {
       if (instructorId) {
         const updatePayload: UpdateInstructorPayload = payload;
         await api.updateInstructor(instructorId, updatePayload);
-        showSuccess("O'qituvchi yangilandi");
+        showSuccessRef.current("O'qituvchi yangilandi");
       } else {
         await api.createInstructor(payload);
-        showSuccess("O'qituvchi qo'shildi");
+        showSuccessRef.current("O'qituvchi qo'shildi");
       }
       await refresh(false);
       setExpandedInstructorId(null);
       setEditingInstructor(null);
     } catch (error: any) {
-      showError(instructorId ? 'Yangilashda xato' : 'Saqlashda xato', error.message ?? "Noma'lum xato");
+      showErrorRef.current(instructorId ? 'Yangilashda xato' : 'Saqlashda xato', error.message ?? "Noma'lum xato");
       throw error;
     } finally {
       setFormSubmitting(false);
@@ -269,11 +279,11 @@ const InstructorsPage = () => {
     setDeleteLoading(true);
     try {
       await api.deleteInstructor(instructorToDelete.id);
-      showSuccess("O'qituvchi o'chirildi");
+      showSuccessRef.current("O'qituvchi o'chirildi");
       setExpandedInstructorId((prev) => (prev === instructorToDelete.id ? null : prev));
       await refresh(false);
     } catch (error: any) {
-      showError("O'qituvchini o'chirishda xato", error.message ?? "Noma'lum xato");
+      showErrorRef.current("O'qituvchini o'chirishda xato", error.message ?? "Noma'lum xato");
     } finally {
       setDeleteLoading(false);
       setInstructorToDelete(null);
