@@ -19,16 +19,17 @@ async function bootstrap() {
   const port = parseInt(configService.get<string>('PORT', '3000'), 10);
   const logger = new Logger('Bootstrap');
 
-  const allowedOrigins = configService
+  const corsOrigins = configService
     .get<string>('FRONTEND_ORIGIN', '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 
   app.enableCors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+    origin: corsOrigins.length > 0 ? corsOrigins : true,
     credentials: true,
   });
+
 
   await app.listen(port);
   logger.log(`Application is running on port ${port}`);
