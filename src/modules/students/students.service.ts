@@ -5,6 +5,7 @@ import { Student } from './entities/student.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { Enrollment } from '../enrollments/entities/enrollment.entity';
 import { UpdateStudentDto } from './dto/update-student.dto';
+import { Instructor } from '../instructors/entities/instructor.entity';
 
 export interface StudentProfile {
   student: Student;
@@ -20,6 +21,8 @@ export class StudentsService {
     private readonly studentRepository: Repository<Student>,
     @InjectRepository(Enrollment)
     private readonly enrollmentRepository: Repository<Enrollment>,
+    @InjectRepository(Instructor)
+    private readonly instructorRepository: Repository<Instructor>,
   ) {}
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
@@ -28,6 +31,13 @@ export class StudentsService {
     });
     if (existing) {
       throw new ConflictException('Student with this email already exists');
+    }
+
+    const instructorWithEmail = await this.instructorRepository.findOne({
+      where: { email: createStudentDto.email },
+    });
+    if (instructorWithEmail) {
+      throw new ConflictException('Instructor with this email already exists');
     }
 
     const student = this.studentRepository.create({
@@ -53,6 +63,12 @@ export class StudentsService {
       });
       if (existing && existing.id !== id) {
         throw new ConflictException('Student with this email already exists');
+      }
+      const instructorWithEmail = await this.instructorRepository.findOne({
+        where: { email: updateStudentDto.email },
+      });
+      if (instructorWithEmail) {
+        throw new ConflictException('Instructor with this email already exists');
       }
     }
 

@@ -5,6 +5,7 @@ import { Instructor } from './entities/instructor.entity';
 import { CreateInstructorDto } from './dto/create-instructor.dto';
 import { Course } from '../courses/entities/course.entity';
 import { UpdateInstructorDto } from './dto/update-instructor.dto';
+import { Student } from '../students/entities/student.entity';
 
 @Injectable()
 export class InstructorsService {
@@ -13,6 +14,8 @@ export class InstructorsService {
     private readonly instructorRepository: Repository<Instructor>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+    @InjectRepository(Student)
+    private readonly studentRepository: Repository<Student>,
   ) {}
 
   async create(createInstructorDto: CreateInstructorDto): Promise<Instructor> {
@@ -22,6 +25,13 @@ export class InstructorsService {
 
     if (existing) {
       throw new ConflictException('Instructor with this email already exists');
+    }
+
+    const studentWithEmail = await this.studentRepository.findOne({
+      where: { email: createInstructorDto.email },
+    });
+    if (studentWithEmail) {
+      throw new ConflictException('Student with this email already exists');
     }
 
     const instructor = this.instructorRepository.create(createInstructorDto);
@@ -65,6 +75,12 @@ export class InstructorsService {
     }
     if (updateInstructorDto.email !== undefined) {
       instructor.email = updateInstructorDto.email;
+      const studentWithEmail = await this.studentRepository.findOne({
+        where: { email: updateInstructorDto.email },
+      });
+      if (studentWithEmail) {
+        throw new ConflictException('Student with this email already exists');
+      }
     }
     if (updateInstructorDto.bio !== undefined) {
       instructor.bio = updateInstructorDto.bio;
