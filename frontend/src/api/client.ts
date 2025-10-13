@@ -1,4 +1,4 @@
-﻿import {
+import {
   ApiError,
   AuthResponse,
   Branch,
@@ -72,7 +72,6 @@ function buildQuery(params: Record<string, string | number | undefined>): string
 }
 
 export const api = {
-  // Auth
   signIn: (payload: SignInPayload) =>
     request<AuthResponse>('/auth/signin', {
       method: 'POST',
@@ -87,7 +86,6 @@ export const api = {
 
   getProfile: () => request<User>('/auth/me'),
 
-  // Branches
   getBranches: () => request<Branch[]>('/branches'),
 
   createBranch: (name: string) =>
@@ -96,7 +94,6 @@ export const api = {
       body: JSON.stringify({ name }),
     }),
 
-  // Users
   getAdmins: () => request<User[]>('/users/admins'),
   getUsers: () => request<User[]>('/users/users'),
 
@@ -117,7 +114,6 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // Courses
   getCourses: (status?: CourseStatusFilter) =>
     request<Course[]>(`/courses${buildQuery({ status })}`),
 
@@ -140,7 +136,6 @@ export const api = {
       method: 'DELETE',
     }),
 
-  // Instructors
   getInstructors: () => request<Instructor[]>('/instructors'),
 
   createInstructor: (payload: CreateInstructorPayload) =>
@@ -162,7 +157,6 @@ export const api = {
 
   getInstructorCourses: (id: number) => request<Course[]>(`/instructors/${id}/courses`),
 
-  // Students
   getStudents: () => request<Student[]>('/students'),
 
   createStudent: (payload: CreateStudentPayload) =>
@@ -192,7 +186,6 @@ export const api = {
 
   getStudentHistory: (id: number) => request<Enrollment[]>(`/students/${id}/history`),
 
-  // Enrollments
   enrollStudent: (payload: EnrollPayload) =>
     request<Enrollment>('/enroll', {
       method: 'POST',

@@ -1,4 +1,4 @@
-﻿export type UserRole = 'superadmin' | 'admin' | 'user';
+export type UserRole = 'superadmin' | 'admin' | 'user';
 
 export interface Branch {
   id: number;
