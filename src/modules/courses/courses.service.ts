@@ -1,6 +1,8 @@
+
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -13,6 +15,9 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseFilterDto, CourseStatus } from './dto/course-filter.dto';
 import { Enrollment } from '../enrollments/entities/enrollment.entity';
 import { Instructor } from '../instructors/entities/instructor.entity';
+import { Branch } from '../branches/entities/branch.entity';
+import { AuthUser } from '../../common/interfaces/auth-user.interface';
+import { UserRole } from '../users/entities/user.entity';
 
 @Injectable()
 export class CoursesService {
@@ -25,9 +30,11 @@ export class CoursesService {
     private readonly enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(Instructor)
     private readonly instructorRepository: Repository<Instructor>,
+    @InjectRepository(Branch)
+    private readonly branchRepository: Repository<Branch>,
   ) {}
 
-  async create(createCourseDto: CreateCourseDto): Promise<Course> {
+  async create(createCourseDto: CreateCourseDto, user: AuthUser): Promise<Course> {
     const { startDate, endDate, instructorId, capacity } = createCourseDto;
     const parsedStart = new Date(startDate);
     const parsedEnd = new Date(endDate);
@@ -36,12 +43,11 @@ export class CoursesService {
       throw new BadRequestException('startDate must be earlier than endDate');
     }
 
+    const branchId = await this.resolveBranchForWrite(createCourseDto.branchId, user);
+
     let instructor: Instructor | null = null;
     if (instructorId) {
-      instructor = await this.instructorRepository.findOne({ where: { id: instructorId } });
-      if (!instructor) {
-        throw new NotFoundException(`Instructor with id ${instructorId} not found`);
-      }
+      instructor = await this.ensureInstructorWithinBranch(instructorId, branchId);
     }
 
     const course = this.courseRepository.create({
@@ -52,6 +58,8 @@ export class CoursesService {
       capacity,
       seatsAvailable: capacity,
       instructorId: instructor?.id ?? null,
+      branchId,
+      createdById: user.id,
     });
 
     if (instructor) {
@@ -59,13 +67,23 @@ export class CoursesService {
     }
 
     const saved = await this.courseRepository.save(course);
-    this.logger.log(`Course created: courseId=${saved.id} instructorId=${saved.instructorId ?? 'none'}`);
-    return this.findOne(saved.id);
+    this.logger.log(
+      `Course created: courseId=${saved.id} branchId=${branchId} instructorId=${saved.instructorId ?? 'none'}`,
+    );
+    return this.findOne(saved.id, user);
   }
 
-  async findAll(filter: CourseFilterDto): Promise<Course[]> {
+  async findAll(filter: CourseFilterDto, user: AuthUser): Promise<Course[]> {
+    const where =
+      user.role === UserRole.SUPERADMIN
+        ? {}
+        : {
+            branchId: this.getBranchIdOrThrow(user),
+          };
+
     const courses = await this.courseRepository.find({
-      relations: { instructor: true },
+      where,
+      relations: { instructor: true, branch: true },
       order: { startDate: 'ASC' },
     });
 
@@ -77,26 +95,20 @@ export class CoursesService {
     return courses.filter((course) => this.matchStatus(course, now) === filter.status);
   }
 
-  async findOne(id: number): Promise<Course> {
-    const course = await this.courseRepository.findOne({
-      where: { id },
-      relations: {
-        instructor: true,
-        enrollments: {
-          student: true,
-        },
+  async findOne(id: number, user: AuthUser): Promise<Course> {
+    return this.requireCourse(id, user, {
+      instructor: true,
+      branch: true,
+      enrollments: {
+        student: true,
       },
     });
-    if (!course) {
-      throw new NotFoundException(`Course with id ${id} not found`);
-    }
-    return course;
   }
 
-  async getRoster(id: number): Promise<Enrollment[]> {
-    await this.requireCourse(id);
+  async getRoster(id: number, user: AuthUser): Promise<Enrollment[]> {
+    const course = await this.requireCourse(id, user);
     return this.enrollmentRepository.find({
-      where: { courseId: id, canceledAt: IsNull() },
+      where: { courseId: course.id, canceledAt: IsNull() },
       relations: {
         student: true,
       },
@@ -106,8 +118,18 @@ export class CoursesService {
     });
   }
 
-  async update(id: number, updateCourseDto: UpdateCourseDto): Promise<Course> {
-    const course = await this.requireCourse(id);
+  async update(id: number, updateCourseDto: UpdateCourseDto, user: AuthUser): Promise<Course> {
+    const course = await this.requireCourse(id, user, { instructor: true });
+
+    if (updateCourseDto.branchId !== undefined) {
+      if (user.role !== UserRole.SUPERADMIN) {
+        throw new ForbiddenException('Only superadmin can change branch');
+      }
+      if (course.branchId !== updateCourseDto.branchId) {
+        await this.verifyBranch(updateCourseDto.branchId);
+        course.branchId = updateCourseDto.branchId;
+      }
+    }
 
     if (updateCourseDto.startDate) {
       course.startDate = new Date(updateCourseDto.startDate);
@@ -140,12 +162,10 @@ export class CoursesService {
         course.instructorId = null;
         course.instructor = null;
       } else {
-        const instructor = await this.instructorRepository.findOne({
-          where: { id: updateCourseDto.instructorId },
-        });
-        if (!instructor) {
-          throw new NotFoundException(`Instructor with id ${updateCourseDto.instructorId} not found`);
-        }
+        const instructor = await this.ensureInstructorWithinBranch(
+          updateCourseDto.instructorId,
+          course.branchId ?? (user.branchId ?? null) ?? undefined,
+        );
         course.instructorId = instructor.id;
         course.instructor = instructor;
       }
@@ -167,11 +187,11 @@ export class CoursesService {
     }
 
     const saved = await this.courseRepository.save(course);
-    return this.findOne(saved.id);
+    return this.findOne(saved.id, user);
   }
 
-  async remove(id: number): Promise<void> {
-    const course = await this.requireCourse(id);
+  async remove(id: number, user: AuthUser): Promise<void> {
+    const course = await this.requireCourse(id, user);
 
     const activeEnrollments = await this.enrollmentRepository.count({
       where: { courseId: id, canceledAt: IsNull() },
@@ -195,11 +215,82 @@ export class CoursesService {
     return 'ongoing';
   }
 
-  private async requireCourse(id: number): Promise<Course> {
-    const course = await this.courseRepository.findOne({ where: { id } });
+  private async requireCourse(
+    id: number,
+    user?: AuthUser,
+    relations?: Parameters<Repository<Course>['findOne']>[0]['relations'],
+  ): Promise<Course> {
+    const course = await this.courseRepository.findOne({
+      where: { id },
+      relations,
+    });
     if (!course) {
       throw new NotFoundException(`Course with id ${id} not found`);
     }
+
+    if (user && user.role !== UserRole.SUPERADMIN) {
+      const branchId = this.getBranchIdOrThrow(user);
+      if (course.branchId !== branchId) {
+        throw new ForbiddenException('Access to this course is not allowed');
+      }
+    }
+
     return course;
+  }
+
+  private async resolveBranchForWrite(
+    requestedBranchId: number | undefined,
+    user: AuthUser,
+  ): Promise<number> {
+    if (user.role === UserRole.SUPERADMIN) {
+      if (!requestedBranchId) {
+        throw new BadRequestException('branchId is required');
+      }
+      await this.verifyBranch(requestedBranchId);
+      return requestedBranchId;
+    }
+
+    const branchId = this.getBranchIdOrThrow(user);
+    if (requestedBranchId && requestedBranchId !== branchId) {
+      throw new ForbiddenException('You can only manage courses within your branch');
+    }
+    return branchId;
+  }
+
+  private async ensureInstructorWithinBranch(
+    instructorId: number,
+    branchId?: number | null | undefined,
+  ): Promise<Instructor> {
+    const instructor = await this.instructorRepository.findOne({
+      where: { id: instructorId },
+    });
+    if (!instructor) {
+      throw new NotFoundException(`Instructor with id ${instructorId} not found`);
+    }
+
+    if (branchId) {
+      if (instructor.branchId && instructor.branchId !== branchId) {
+        throw new ForbiddenException('Instructor belongs to another branch');
+      }
+    }
+
+    return instructor;
+  }
+
+  private async verifyBranch(branchId: number | null | undefined): Promise<void> {
+    if (!branchId) {
+      throw new BadRequestException('branchId is required');
+    }
+    const exists = await this.branchRepository.exists({ where: { id: branchId } });
+    if (!exists) {
+      throw new NotFoundException(`Branch with id ${branchId} not found`);
+    }
+  }
+
+  private getBranchIdOrThrow(user: AuthUser): number {
+    if (!user.branchId) {
+      throw new BadRequestException('Branch is not assigned to current user');
+    }
+    return user.branchId;
   }
 }

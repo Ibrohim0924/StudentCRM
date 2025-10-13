@@ -5,9 +5,10 @@ import { InstructorsController } from './instructors.controller';
 import { Instructor } from './entities/instructor.entity';
 import { Course } from '../courses/entities/course.entity';
 import { Student } from '../students/entities/student.entity';
+import { Branch } from '../branches/entities/branch.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Instructor, Course, Student])],
+  imports: [TypeOrmModule.forFeature([Instructor, Course, Student, Branch])],
   controllers: [InstructorsController],
   providers: [InstructorsService],
   exports: [InstructorsService],

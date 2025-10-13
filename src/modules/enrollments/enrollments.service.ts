@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,6 +15,8 @@ import { Course } from '../courses/entities/course.entity';
 import { CompleteEnrollmentDto } from './dto/complete-enrollment.dto';
 import { UnenrollDto } from './dto/unenroll.dto';
 import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
+import { AuthUser } from '../../common/interfaces/auth-user.interface';
+import { UserRole } from '../users/entities/user.entity';
 
 @Injectable()
 export class EnrollmentsService {
@@ -25,7 +28,7 @@ export class EnrollmentsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async enroll(enrollStudentDto: EnrollStudentDto): Promise<Enrollment> {
+  async enroll(enrollStudentDto: EnrollStudentDto, user: AuthUser): Promise<Enrollment> {
     const { studentId, courseId } = enrollStudentDto;
 
     const savedEnrollment = await this.dataSource.transaction(async (manager) => {
@@ -38,6 +41,8 @@ export class EnrollmentsService {
       if (!course) {
         throw new NotFoundException(`Course with id ${courseId} not found`);
       }
+
+      const branchId = this.resolveEnrollmentBranch(student, course, user);
 
       const now = new Date();
       if (new Date(course.endDate).getTime() <= now.getTime()) {
@@ -52,6 +57,8 @@ export class EnrollmentsService {
       });
 
       if (existingEnrollment) {
+        this.assertBranchAccess(existingEnrollment.branchId, user);
+
         if (!existingEnrollment.canceledAt && !existingEnrollment.completed) {
           throw new ConflictException('Student is already enrolled in this course');
         }
@@ -69,6 +76,8 @@ export class EnrollmentsService {
         existingEnrollment.completionDate = null;
         existingEnrollment.enrolledDate = now;
         existingEnrollment.completed = false;
+        existingEnrollment.branchId = branchId;
+        existingEnrollment.createdById = user.id;
 
         await manager.save(Course, course);
         return manager.save(Enrollment, existingEnrollment);
@@ -85,6 +94,8 @@ export class EnrollmentsService {
         courseId,
         enrolledDate: now,
         completed: false,
+        branchId,
+        createdById: user.id,
       });
 
       await manager.save(Course, course);
@@ -95,23 +106,20 @@ export class EnrollmentsService {
       `Enrollment created: enrollmentId=${savedEnrollment.id} studentId=${savedEnrollment.studentId} courseId=${savedEnrollment.courseId}`,
     );
 
-    const enrollment = await this.enrollmentRepository.findOne({
-      where: { id: savedEnrollment.id },
-      relations: {
-        student: true,
-        course: true,
-      },
+    return this.requireEnrollment(savedEnrollment.id, user, {
+      student: true,
+      course: true,
     });
-
-    if (!enrollment) {
-      throw new NotFoundException('Enrollment not found after creation');
-    }
-
-    return enrollment;
   }
 
-  async findAll(): Promise<Enrollment[]> {
+  async findAll(user: AuthUser): Promise<Enrollment[]> {
+    const where =
+      user.role === UserRole.SUPERADMIN
+        ? {}
+        : { branchId: this.getBranchIdOrThrow(user) };
+
     return this.enrollmentRepository.find({
+      where,
       relations: {
         student: true,
         course: true,
@@ -122,224 +130,171 @@ export class EnrollmentsService {
     });
   }
 
-  async findOne(id: number): Promise<Enrollment> {
-    const enrollment = await this.enrollmentRepository.findOne({
-      where: { id },
-      relations: {
-        student: true,
-        course: true,
-      },
+  async findOne(id: number, user: AuthUser): Promise<Enrollment> {
+    return this.requireEnrollment(id, user, {
+      student: true,
+      course: true,
     });
-
-    if (!enrollment) {
-      throw new NotFoundException(`Enrollment with id ${id} not found`);
-    }
-
-    return enrollment;
   }
 
-  async update(id: number, updateEnrollmentDto: UpdateEnrollmentDto): Promise<Enrollment> {
-    const updated = await this.dataSource.transaction(async (manager) => {
-      const enrollment = await manager.findOne(Enrollment, {
-        where: { id },
-        relations: { course: true },
+  async update(
+    id: number,
+    updateEnrollmentDto: UpdateEnrollmentDto,
+    user: AuthUser,
+  ): Promise<Enrollment> {
+    if (user.role !== UserRole.SUPERADMIN) {
+      throw new ForbiddenException('Only superadmin can update enrollments directly');
+    }
+
+    const enrollment = await this.requireEnrollment(id, user);
+
+    if (updateEnrollmentDto.studentId && updateEnrollmentDto.studentId !== enrollment.studentId) {
+      const student = await this.dataSource.manager.findOne(Student, {
+        where: { id: updateEnrollmentDto.studentId },
       });
-
-      if (!enrollment) {
-        throw new NotFoundException(`Enrollment with id ${id} not found`);
+      if (!student) {
+        throw new NotFoundException(`Student with id ${updateEnrollmentDto.studentId} not found`);
       }
-
-      if (
-        updateEnrollmentDto.studentId !== undefined &&
-        updateEnrollmentDto.studentId !== enrollment.studentId
-      ) {
-        throw new ConflictException('Changing student for an enrollment is not supported');
-      }
-
-      if (
-        updateEnrollmentDto.courseId !== undefined &&
-        updateEnrollmentDto.courseId !== enrollment.courseId
-      ) {
-        throw new ConflictException('Changing course for an enrollment is not supported');
-      }
-
-      const course =
-        enrollment.course ?? (await manager.findOne(Course, { where: { id: enrollment.courseId } }));
+      const course = await this.dataSource.manager.findOne(Course, {
+        where: { id: enrollment.courseId },
+      });
       if (!course) {
         throw new NotFoundException(`Course with id ${enrollment.courseId} not found`);
       }
+      enrollment.branchId = this.resolveEnrollmentBranch(student, course, user);
+      enrollment.studentId = student.id;
+    }
 
-      let courseChanged = false;
-
-      if (updateEnrollmentDto.enrolledDate !== undefined) {
-        enrollment.enrolledDate = new Date(updateEnrollmentDto.enrolledDate);
+    if (updateEnrollmentDto.courseId && updateEnrollmentDto.courseId !== enrollment.courseId) {
+      const course = await this.dataSource.manager.findOne(Course, {
+        where: { id: updateEnrollmentDto.courseId },
+      });
+      if (!course) {
+        throw new NotFoundException(`Course with id ${updateEnrollmentDto.courseId} not found`);
       }
-
-      if (updateEnrollmentDto.completed !== undefined) {
-        if (updateEnrollmentDto.completed && enrollment.canceledAt) {
-          throw new ConflictException('Cannot complete a canceled enrollment');
-        }
-
-        enrollment.completed = updateEnrollmentDto.completed;
-        if (updateEnrollmentDto.completed) {
-          enrollment.completionDate = updateEnrollmentDto.completionDate
-            ? new Date(updateEnrollmentDto.completionDate)
-            : new Date();
-        } else {
-          if (updateEnrollmentDto.completionDate !== undefined) {
-            enrollment.completionDate = updateEnrollmentDto.completionDate
-              ? new Date(updateEnrollmentDto.completionDate)
-              : null;
-          } else {
-            enrollment.completionDate = null;
-          }
-        }
-      } else if (updateEnrollmentDto.completionDate !== undefined) {
-        if (!enrollment.completed && updateEnrollmentDto.completionDate) {
-          throw new ConflictException('Cannot set completionDate for an incomplete enrollment');
-        }
-        enrollment.completionDate = updateEnrollmentDto.completionDate
-          ? new Date(updateEnrollmentDto.completionDate)
-          : null;
+      const student = await this.dataSource.manager.findOne(Student, {
+        where: { id: enrollment.studentId },
+      });
+      if (!student) {
+        throw new NotFoundException(`Student with id ${enrollment.studentId} not found`);
       }
+      enrollment.branchId = this.resolveEnrollmentBranch(student, course, user);
+      enrollment.courseId = course.id;
+    }
 
-      if (updateEnrollmentDto.canceledAt !== undefined) {
-        if (updateEnrollmentDto.canceledAt && enrollment.completed) {
-          throw new ConflictException('Cannot cancel a completed enrollment');
-        }
+    if (updateEnrollmentDto.enrolledDate !== undefined) {
+      enrollment.enrolledDate = new Date(updateEnrollmentDto.enrolledDate);
+    }
+    if (updateEnrollmentDto.completed !== undefined) {
+      enrollment.completed = updateEnrollmentDto.completed;
+    }
+    if (updateEnrollmentDto.completionDate !== undefined) {
+      enrollment.completionDate = updateEnrollmentDto.completionDate
+        ? new Date(updateEnrollmentDto.completionDate)
+        : null;
+    }
+    if (updateEnrollmentDto.canceledAt !== undefined) {
+      enrollment.canceledAt = updateEnrollmentDto.canceledAt
+        ? new Date(updateEnrollmentDto.canceledAt)
+        : null;
+    }
 
-        const newCanceledAt = updateEnrollmentDto.canceledAt
-          ? new Date(updateEnrollmentDto.canceledAt)
-          : null;
-        const wasCanceled = Boolean(enrollment.canceledAt);
-        const willCancel = Boolean(newCanceledAt);
-
-        if (!wasCanceled && willCancel) {
-          course.seatsAvailable += 1;
-          courseChanged = true;
-        } else if (wasCanceled && !willCancel) {
-          if (new Date(course.endDate).getTime() <= Date.now()) {
-            throw new ConflictException('Course already completed');
-          }
-          if (course.seatsAvailable <= 0) {
-            throw new ConflictException('Course has no available seats');
-          }
-          course.seatsAvailable -= 1;
-          courseChanged = true;
-        }
-
-        enrollment.canceledAt = newCanceledAt;
-      }
-
-      if (courseChanged) {
-        enrollment.course = await manager.save(Course, course);
-      }
-
-      const saved = await manager.save(Enrollment, enrollment);
-      return saved;
+    await this.enrollmentRepository.save(enrollment);
+    return this.requireEnrollment(id, user, {
+      student: true,
+      course: true,
     });
-
-    this.logger.log(
-      `Enrollment updated: enrollmentId=${updated.id} studentId=${updated.studentId} courseId=${updated.courseId}`,
-    );
-
-    return this.findOne(updated.id);
   }
 
-  async complete(dto: CompleteEnrollmentDto): Promise<Enrollment> {
-    const { enrollmentId } = dto;
+  async complete(dto: CompleteEnrollmentDto, user: AuthUser): Promise<Enrollment> {
+    const enrollment = await this.requireEnrollment(dto.enrollmentId, user);
     const updated = await this.dataSource.transaction(async (manager) => {
-      const enrollment = await manager.findOne(Enrollment, { where: { id: enrollmentId } });
-      if (!enrollment) {
-        throw new NotFoundException(`Enrollment with id ${enrollmentId} not found`);
+      const record = await manager.findOne(Enrollment, { where: { id: enrollment.id } });
+      if (!record) {
+        throw new NotFoundException(`Enrollment with id ${enrollment.id} not found`);
       }
-      if (enrollment.canceledAt) {
+      if (record.canceledAt) {
         throw new BadRequestException('Cannot complete a canceled enrollment');
       }
-      if (enrollment.completed) {
-        return enrollment;
+      if (record.completed) {
+        return record;
       }
 
-      enrollment.completed = true;
-      enrollment.completionDate = new Date();
-      return manager.save(Enrollment, enrollment);
+      record.completed = true;
+      record.completionDate = new Date();
+      return manager.save(Enrollment, record);
     });
 
     this.logger.log(
       `Enrollment completed: enrollmentId=${updated.id} studentId=${updated.studentId} courseId=${updated.courseId}`,
     );
 
-    const enrollment = await this.enrollmentRepository.findOne({
-      where: { id: updated.id },
-      relations: {
-        student: true,
-        course: true,
-      },
+    return this.requireEnrollment(updated.id, user, {
+      student: true,
+      course: true,
     });
-
-    if (!enrollment) {
-      throw new NotFoundException('Enrollment not found after completion');
-    }
-
-    return enrollment;
   }
 
-  async unenroll(dto: UnenrollDto): Promise<Enrollment> {
-    const { enrollmentId } = dto;
+  async unenroll(dto: UnenrollDto, user: AuthUser): Promise<Enrollment> {
+    const enrollment = await this.requireEnrollment(dto.enrollmentId, user, {
+      course: true,
+    });
 
     const updated = await this.dataSource.transaction(async (manager) => {
-      const enrollment = await manager.findOne(Enrollment, {
-        where: { id: enrollmentId },
+      const record = await manager.findOne(Enrollment, {
+        where: { id: enrollment.id },
         relations: { course: true },
       });
-      if (!enrollment) {
-        throw new NotFoundException(`Enrollment with id ${enrollmentId} not found`);
+      if (!record) {
+        throw new NotFoundException(`Enrollment with id ${enrollment.id} not found`);
       }
-      if (enrollment.canceledAt) {
-        return enrollment;
+      if (record.canceledAt) {
+        return record;
       }
-      if (enrollment.completed) {
+      if (record.completed) {
         throw new BadRequestException('Cannot unenroll a completed enrollment');
       }
 
       const course =
-        enrollment.course ?? (await manager.findOne(Course, { where: { id: enrollment.courseId } }));
+        record.course ?? (await manager.findOne(Course, { where: { id: record.courseId } }));
       if (!course) {
-        throw new NotFoundException(`Course with id ${enrollment.courseId} not found`);
+        throw new NotFoundException(`Course with id ${record.courseId} not found`);
       }
 
+      this.assertBranchAccess(course.branchId, user);
+
       course.seatsAvailable += 1;
-      enrollment.canceledAt = new Date();
+      record.canceledAt = new Date();
 
       await manager.save(Course, course);
-      return manager.save(Enrollment, enrollment);
+      return manager.save(Enrollment, record);
     });
 
     this.logger.log(
       `Enrollment canceled: enrollmentId=${updated.id} studentId=${updated.studentId} courseId=${updated.courseId}`,
     );
 
-    const enrollment = await this.enrollmentRepository.findOne({
-      where: { id: updated.id },
-      relations: {
-        student: true,
-        course: true,
-      },
+    return this.requireEnrollment(updated.id, user, {
+      student: true,
+      course: true,
     });
-
-    if (!enrollment) {
-      throw new NotFoundException('Enrollment not found after cancelation');
-    }
-
-    return enrollment;
   }
 
-  async findActiveEnrollments(): Promise<Enrollment[]> {
+  async findActiveEnrollments(user: AuthUser): Promise<Enrollment[]> {
+    const where =
+      user.role === UserRole.SUPERADMIN
+        ? {
+            completed: false,
+            canceledAt: IsNull(),
+          }
+        : {
+            completed: false,
+            canceledAt: IsNull(),
+            branchId: this.getBranchIdOrThrow(user),
+          };
+
     return this.enrollmentRepository.find({
-      where: {
-        completed: false,
-        canceledAt: IsNull(),
-      },
+      where,
       relations: {
         student: true,
         course: true,
@@ -350,26 +305,77 @@ export class EnrollmentsService {
     });
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, user: AuthUser): Promise<void> {
+    const enrollment = await this.requireEnrollment(id, user, {
+      course: true,
+    });
+
     await this.dataSource.transaction(async (manager) => {
-      const enrollment = await manager.findOne(Enrollment, {
-        where: { id },
+      const record = await manager.findOne(Enrollment, {
+        where: { id: enrollment.id },
         relations: { course: true },
       });
-      if (!enrollment) {
+      if (!record) {
         throw new NotFoundException(`Enrollment with id ${id} not found`);
       }
 
       const course =
-        enrollment.course ?? (await manager.findOne(Course, { where: { id: enrollment.courseId } }));
-      if (course && !enrollment.canceledAt && !enrollment.completed) {
+        record.course ?? (await manager.findOne(Course, { where: { id: record.courseId } }));
+      if (course && !record.canceledAt && !record.completed) {
         course.seatsAvailable += 1;
         await manager.save(Course, course);
       }
 
-      await manager.remove(Enrollment, enrollment);
+      await manager.remove(Enrollment, record);
     });
 
     this.logger.log(`Enrollment removed: enrollmentId=${id}`);
+  }
+
+  private async requireEnrollment(
+    id: number,
+    user: AuthUser,
+    relations?: Parameters<Repository<Enrollment>['findOne']>[0]['relations'],
+  ): Promise<Enrollment> {
+    const enrollment = await this.enrollmentRepository.findOne({
+      where: { id },
+      relations,
+    });
+    if (!enrollment) {
+      throw new NotFoundException(`Enrollment with id ${id} not found`);
+    }
+
+    this.assertBranchAccess(enrollment.branchId, user);
+    return enrollment;
+  }
+
+  private resolveEnrollmentBranch(student: Student, course: Course, user: AuthUser): number {
+    if (!student.branchId || !course.branchId) {
+      throw new BadRequestException('Student and course must be assigned to a branch');
+    }
+
+    if (student.branchId !== course.branchId) {
+      throw new ConflictException('Student and course belong to different branches');
+    }
+
+    this.assertBranchAccess(course.branchId, user);
+    return course.branchId;
+  }
+
+  private assertBranchAccess(branchId: number | null | undefined, user: AuthUser): void {
+    if (user.role === UserRole.SUPERADMIN) {
+      return;
+    }
+    const userBranchId = this.getBranchIdOrThrow(user);
+    if (branchId !== userBranchId) {
+      throw new ForbiddenException('Operation restricted to your branch');
+    }
+  }
+
+  private getBranchIdOrThrow(user: AuthUser): number {
+    if (!user.branchId) {
+      throw new BadRequestException('Branch is not assigned to current user');
+    }
+    return user.branchId;
   }
 }

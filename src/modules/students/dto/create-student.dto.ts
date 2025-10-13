@@ -1,4 +1,4 @@
-import { IsDateString, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateStudentDto {
   @IsString()
@@ -13,4 +13,8 @@ export class CreateStudentDto {
   @IsOptional()
   @IsDateString()
   enrolledAt?: string;
+
+  @IsOptional()
+  @IsInt()
+  branchId?: number;
 }

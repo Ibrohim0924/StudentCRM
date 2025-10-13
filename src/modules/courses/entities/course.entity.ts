@@ -11,6 +11,8 @@ import {
 import { dateColumnType } from '../../../config/database.constants';
 import { Instructor } from '../../instructors/entities/instructor.entity';
 import { Enrollment } from '../../enrollments/entities/enrollment.entity';
+import { Branch } from '../../branches/entities/branch.entity';
+import { User } from '../../users/entities/user.entity';
 
 @Entity({ name: 'courses' })
 export class Course {
@@ -44,6 +46,26 @@ export class Course {
   })
   @JoinColumn({ name: 'instructorId' })
   instructor?: Instructor | null;
+
+  @Column({ type: 'int', nullable: true })
+  branchId?: number | null;
+
+  @ManyToOne(() => Branch, (branch) => branch.courses, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'branchId' })
+  branch?: Branch | null;
+
+  @Column({ type: 'int', nullable: true, select: false })
+  createdById?: number | null;
+
+  @ManyToOne(() => User, (user) => user.createdCourses, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'createdById' })
+  createdBy?: User | null;
 
   @OneToMany(() => Enrollment, (enrollment) => enrollment.course)
   enrollments: Enrollment[];

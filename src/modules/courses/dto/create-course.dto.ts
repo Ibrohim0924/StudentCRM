@@ -24,4 +24,8 @@ export class CreateCourseDto {
   @IsInt()
   @Min(1)
   instructorId?: number;
+
+  @IsOptional()
+  @IsInt()
+  branchId?: number;
 }
