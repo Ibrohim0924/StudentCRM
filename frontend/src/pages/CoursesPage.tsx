@@ -28,7 +28,6 @@
   NumberInputField,
   Select,
   SimpleGrid,
-  Spinner,
   Stack,
   Table,
   Tbody,
@@ -50,6 +49,7 @@ import {
   UpdateCoursePayload,
 } from '../api/types';
 import { useApiToast } from '../hooks/useApiToast';
+import { LoadingState, EmptyState } from '../components/PageState';
 
 const statusFilters: { label: string; value?: CourseStatusFilter }[] = [
   { label: "Barchasi", value: undefined },
@@ -336,11 +336,17 @@ const CoursesPage = () => {
         <Divider />
         <CardBody>
           {loading ? (
-            <Stack align="center" py={16}>
-              <Spinner size="lg" />
-            </Stack>
+            <LoadingState description="Kurslar ro'yxati tayyorlanmoqda. Iltimos, biroz kuting." />
           ) : sortedCourses.length === 0 ? (
-            <Text color="gray.500">Tanlangan filtr bo'yicha kurs topilmadi.</Text>
+            <EmptyState
+              title="Kurs topilmadi"
+              description="Iltimos, boshqa filtrlarni sinab ko'ring yoki yangi kurs yarating."
+              actionLabel="Yangi kurs"
+              onAction={() => {
+                setEditingCourse(null);
+                createModal.onOpen();
+              }}
+            />
           ) : (
             <Box overflowX="auto">
               <Table variant="simple" size="md">

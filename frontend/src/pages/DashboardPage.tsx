@@ -10,7 +10,6 @@
   Heading,
   Progress,
   SimpleGrid,
-  Spinner,
   Stack,
   Stat,
   StatLabel,
@@ -29,6 +28,7 @@ import { FiRefreshCw } from 'react-icons/fi';
 import { api } from '../api/client';
 import { Course, Enrollment, Student } from '../api/types';
 import { useApiToast } from '../hooks/useApiToast';
+import { LoadingState } from '../components/PageState';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -132,11 +132,7 @@ const DashboardPage = () => {
   );
 
   if (loading) {
-    return (
-      <Flex align="center" justify="center" minH="50vh">
-        <Spinner size="xl" />
-      </Flex>
-    );
+    return <LoadingState description="Dashboard ma'lumotlari tayyorlanmoqda. Iltimos, biroz kuting." />;
   }
 
   return (

@@ -15,12 +15,11 @@ import {
   DrawerOverlay,
   DrawerHeader,
   DrawerCloseButton,
-  Button,
   Stack,
 } from '@chakra-ui/react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { FiMoon, FiSun, FiMenu, FiLogOut } from 'react-icons/fi';
-import { useAuth } from '../context/AuthContext';
+import { FiMoon, FiSun, FiMenu } from 'react-icons/fi';
+import UserInfoMenu from './UserInfoMenu';
 
 const navItems = [
   { label: "Asosiy", path: '/' },
@@ -37,12 +36,6 @@ const Layout = () => {
   const headerBg = useColorModeValue('white', 'gray.900');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const { logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
 
   const renderNavItems = (direction: 'row' | 'column') => (
     <Stack direction={direction} spacing={direction === 'row' ? 2 : 4} w="full">
@@ -102,13 +95,7 @@ const Layout = () => {
             onClick={toggleColorMode}
             variant="ghost"
           />
-          <Button
-            variant="ghost"
-            leftIcon={<FiLogOut />}
-            onClick={handleLogout}
-          >
-            Chiqish
-          </Button>
+          <UserInfoMenu />
         </HStack>
       </Flex>
 
