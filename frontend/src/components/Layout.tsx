@@ -18,13 +18,9 @@ import {
   Button,
   Stack,
 } from '@chakra-ui/react';
-import { ReactNode } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { FiMoon, FiSun, FiMenu } from 'react-icons/fi';
-
-interface LayoutProps {
-  children: ReactNode;
-}
+import { useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { FiMoon, FiSun, FiMenu, FiLogOut } from 'react-icons/fi';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { label: "Asosiy", path: '/' },
@@ -34,13 +30,19 @@ const navItems = [
   { label: "Ro'yxatlar", path: '/enrollments' },
 ];
 
-const Layout = ({ children }: LayoutProps) => {
+const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { colorMode, toggleColorMode } = useColorMode();
   const headerBg = useColorModeValue('white', 'gray.900');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   const renderNavItems = (direction: 'row' | 'column') => (
     <Stack direction={direction} spacing={direction === 'row' ? 2 : 4} w="full">
@@ -100,12 +102,19 @@ const Layout = ({ children }: LayoutProps) => {
             onClick={toggleColorMode}
             variant="ghost"
           />
+          <Button
+            variant="ghost"
+            leftIcon={<FiLogOut />}
+            onClick={handleLogout}
+          >
+            Chiqish
+          </Button>
         </HStack>
       </Flex>
 
       <Flex flex="1" px={{ base: 4, md: 8 }} py={{ base: 6, md: 10 }} justify="center">
         <Box w="full" maxW="1200px">
-          {children}
+          <Outlet />
         </Box>
       </Flex>
 
