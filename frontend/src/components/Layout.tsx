@@ -16,6 +16,7 @@ import {
   DrawerHeader,
   DrawerCloseButton,
   Stack,
+  Button,
 } from '@chakra-ui/react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { FiMoon, FiSun, FiMenu } from 'react-icons/fi';
